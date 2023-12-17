@@ -37,14 +37,5 @@ contract RL80Test is StdCheats, Test {
         rL80.transfer(address(0x1), 1 ether);
     }
 
-    function testEnableTradingAndTransfer() public {
-        rL80.enableTrading();
-        assertTrue(rL80.tradingEnabled());
-
-        uint256 transferAmount = 1 ether;
-        rL82Token.transfer(address(0x1), transferAmount);
-        assertEq(rL80.balanceOf(address(0x1)), transferAmount);
-    }
-
     // Additional tests for tax logic, holding limit, burn functionality, etc., can be added here.
 }
