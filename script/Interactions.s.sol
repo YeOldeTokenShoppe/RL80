@@ -11,14 +11,8 @@ import {LinkToken} from "../test/mocks/LinkToken.sol";
 contract CreateSubscription is Script {
     function createSubscriptionUsingConfig() public returns (uint64) {
         HelperConfig helperConfig = new HelperConfig();
-        (
-            uint64 subscriptionId,
-            ,
-            ,
-            address vrfCoordinatorV2,
-            address link,
-            uint256 deployerKey
-        ) = helperConfig.activeNetworkConfig();
+        (, , , address vrfCoordinatorV2, , uint256 deployerKey) = helperConfig
+            .activeNetworkConfig();
         return createSubscription(vrfCoordinatorV2, deployerKey);
     }
 
@@ -66,7 +60,7 @@ contract AddConsumer is Script {
             ,
             ,
             address vrfCoordinatorV2,
-            address link,
+            ,
             uint256 deployerKey
         ) = helperConfig.activeNetworkConfig();
         addConsumer(
