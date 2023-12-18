@@ -8,9 +8,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.21;
 
-import {VRFCoordinatorV2Mock} from "contract files/lib/@chainlink/contracts/src/v0.8/mocks/VRFCoordinatorV2Mock.sol";
+import {VRFCoordinatorV2Mock} from "lib/@chainlink/contracts/src/v0.8/mocks/VRFCoordinatorV2Mock.sol";
 import {LinkToken} from "../test/mocks/LinkToken.sol";
-import {Script} from "contract files/lib/forge-std/src/Script.sol";
+import {Script} from "lib/forge-std/src/Script.sol";
 
 contract HelperConfig is Script {
     NetworkConfig public activeNetworkConfig;

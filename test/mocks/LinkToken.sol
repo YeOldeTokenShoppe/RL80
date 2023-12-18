@@ -3,7 +3,7 @@
 // @dev This contract has been adapted to fit with dappTools
 pragma solidity ^0.8.21;
 
-import {ERC20} from "contract files/lib/@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ERC20} from "lib/@openzeppelin/contracts/token/ERC20/ERC20.sol";
 
 interface ERC677Receiver {
     function onTokenTransfer(

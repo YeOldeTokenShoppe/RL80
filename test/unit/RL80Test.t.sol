@@ -2,13 +2,13 @@
 
 pragma solidity ^0.8.21;
 
-import {DeployRL80} from "contract files/script/DeployRL80.s.sol";
-import {RL80} from "contract files/src/RL80.sol";
-import {HelperConfig} from "contract files/script/HelperConfig.s.sol";
-import {Test, console} from "contract files/lib/forge-std/src/Test.sol";
-import {Vm} from "contract files/lib/forge-std/src/Vm.sol";
-import {StdCheats} from "contract files/lib/forge-std/src/StdCheats.sol";
-import {VRFCoordinatorV2Mock} from "contract files/lib/@chainlink/contracts/src/v0.8/mocks/VRFCoordinatorV2Mock.sol";
+import {DeployRL80} from "script/DeployRL80.s.sol";
+import {RL80} from "src/RL80.sol";
+import {HelperConfig} from "script/HelperConfig.s.sol";
+import {Test, console} from "lib/forge-std/src/Test.sol";
+import {Vm} from "lib/forge-std/src/Vm.sol";
+import {StdCheats} from "lib/forge-std/src/StdCheats.sol";
+import {VRFCoordinatorV2Mock} from "lib/@chainlink/contracts/src/v0.8/mocks/VRFCoordinatorV2Mock.sol";
 
 contract RL80Test is StdCheats, Test {
     RL80 public rL80;

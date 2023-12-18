@@ -18,6 +18,3 @@ lib/
 
 node_modules/
 
-lib/forge-std/
-
-lib/foundry-devops

@@ -2,7 +2,7 @@
 
 pragma solidity 0.8.21;
 
-import {Script} from "contract files/lib/forge-std/src/Script.sol";
+import {Script} from "lib/forge-std/src/Script.sol";
 import {RL80} from "../src/RL80.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 import {CreateSubscription, FundSubscription} from "./Interactions.s.sol";

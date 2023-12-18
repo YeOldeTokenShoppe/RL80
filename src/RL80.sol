@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.21;
 
-import {ERC20} from "contract files/lib/@openzeppelin/contracts/token/ERC20/ERC20.sol";
-import {ERC20Burnable} from "contract files/lib/@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
-import {Ownable} from "contract files/lib/@openzeppelin/contracts/access/Ownable.sol";
-import {VRFConsumerBaseV2} from "contract files/lib/@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
-import {VRFCoordinatorV2Interface} from "contract files/lib/@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
+import {ERC20} from "lib/@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ERC20Burnable} from "lib/@openzeppelin/contracts/token/ERC20/extensions/ERC20Burnable.sol";
+import {Ownable} from "lib/@openzeppelin/contracts/access/Ownable.sol";
+import {VRFConsumerBaseV2} from "lib/@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
+import {VRFCoordinatorV2Interface} from "lib/@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
 
 contract RL80 is ERC20, ERC20Burnable, VRFConsumerBaseV2, Ownable {
     error RL80__NoWinningNumbers();
