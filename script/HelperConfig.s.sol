@@ -93,7 +93,7 @@ contract HelperConfig is Script {
         );
 
         anvilNetworkConfig = NetworkConfig({
-            subscriptionId: 6725, // If left as 0, our scripts will create one!
+            subscriptionId: 0, // If left as 0, our scripts will create one!
             keyHash: 0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c, // doesn't really matter
             callbackGasLimit: 500000, // 500,000 gas
             vrfCoordinatorV2: address(vrfCoordinatorV2Mock),

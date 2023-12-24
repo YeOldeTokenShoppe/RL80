@@ -2,6 +2,12 @@
 src = "src"
 out = "out"
 libs = ["lib"]
+solc_version = "0.8.21"
+solc_optimize = true
+solc_optimize_runs = 200
+
+[fuzz]
+runs = 1000
 
 [etherscan]
 mainnet = { key = "${ETHERSCAN_API_KEY}" }

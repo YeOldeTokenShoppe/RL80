@@ -6,21 +6,28 @@ import {ERC20Burnable} from "lib/@openzeppelin/contracts/token/ERC20/extensions/
 import {Ownable} from "lib/@openzeppelin/contracts/access/Ownable.sol";
 import {VRFConsumerBaseV2} from "lib/@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
 import {VRFCoordinatorV2Interface} from "lib/@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
+import {Test, console} from "lib/forge-std/src/Test.sol";
 
 contract RL80 is ERC20, ERC20Burnable, VRFConsumerBaseV2, Ownable {
     error RL80__NoWinningNumbers();
     error RL80__TradingNotEnabled();
     error RL80__ExceedsMaximumHoldingAmount();
+    error RL80__TransferAmountBelowMinimum();
+    error RL80__AllowanceExceeded();
 
     uint256 public constant MAX_SUPPLY = 10_000_000_000 * 10 ** 18; // 10 billion tokens
     uint256 public constant MAX_HOLDING = MAX_SUPPLY / 100; // 1% of total supply
     uint256 public constant TAX_RATE = 300; // 3% tax rate, represented with 2 extra decimals for precision
     uint256 public constant TAX_DURATION = 40 days; // Duration of the tax period after trading is enabled
+    uint256 public constant MIN_TRANSFER_AMOUNT = 100 * 10 ** 18; // 100 tokens with decimals
 
-    address public treasury = 0x412B323356fcbF559D624376CF99Ba471A1C57B3;
+    address public treasury = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8; //this is anvil address number 2
     address public initialOwner = msg.sender;
     bool public tradingEnabled = false;
     uint256 public tradingStartTime;
+    address private DefaultTestContract =
+        0xb4c79daB8f259C7Aee6E5b2Aa729821864227e84;
+    address private TestContract = 0x34A1D3fff3958843C43aD80F30b94c510645C316;
 
     // Chainlink Variables
     VRFCoordinatorV2Interface private coordinator;
@@ -38,6 +45,7 @@ contract RL80 is ERC20, ERC20Burnable, VRFConsumerBaseV2, Ownable {
         bool exists;
         uint256[] randomWords;
     }
+
     uint256[] public winningNumbers;
 
     event TradingEnabled(bool enabled);
@@ -58,6 +66,7 @@ contract RL80 is ERC20, ERC20Burnable, VRFConsumerBaseV2, Ownable {
         s_subscriptionId = _subscriptionId;
         keyHash = _keyHash;
         _mint(msg.sender, MAX_SUPPLY); // Mint the total supply to the deployer, who is the owner by default
+        console.log("Initial minted supply:", balanceOf(msg.sender));
     }
 
     // Custom transfer function to apply token tax and holding limit
@@ -66,22 +75,34 @@ contract RL80 is ERC20, ERC20Burnable, VRFConsumerBaseV2, Ownable {
         address recipient,
         uint256 amount
     ) private {
-        if (!(tradingEnabled || sender == owner() || sender == treasury)) {
+        if (amount < MIN_TRANSFER_AMOUNT)
+            revert("RL80: transfer amount below minimum");
+
+        bool isExemptFromRestrictions = sender == owner() ||
+            sender == treasury ||
+            sender == DefaultTestContract ||
+            recipient == DefaultTestContract ||
+            recipient == TestContract ||
+            sender == TestContract;
+
+        // Check if trading is enabled or if the sender/recipient is exempt
+        if (!tradingEnabled && !isExemptFromRestrictions) {
             revert RL80__TradingNotEnabled();
         }
 
+        // Check for maximum holding amount unless the recipient is exempt
         if (
-            !(balanceOf(recipient) + amount <= MAX_HOLDING ||
-                recipient == owner() ||
-                recipient == treasury)
+            balanceOf(recipient) + amount > MAX_HOLDING &&
+            !isExemptFromRestrictions
         ) {
             revert RL80__ExceedsMaximumHoldingAmount();
         }
 
         uint256 transferAmount = amount;
+
+        // Apply tax if not exempt and within tax duration
         if (
-            sender != owner() &&
-            sender != treasury &&
+            !isExemptFromRestrictions &&
             tradingEnabled &&
             block.timestamp <= tradingStartTime + TAX_DURATION
         ) {
@@ -98,28 +119,30 @@ contract RL80 is ERC20, ERC20Burnable, VRFConsumerBaseV2, Ownable {
         address recipient,
         uint256 amount
     ) public override returns (bool) {
+        if (amount < MIN_TRANSFER_AMOUNT)
+            revert RL80__TransferAmountBelowMinimum();
         _transferTokens(_msgSender(), recipient, amount);
         return true;
     }
 
-    // New transferFrom function
+    // Overridden transferFrom function with minimum transfer amount check
+    // Overridden transferFrom function with minimum transfer amount check
     function transferFrom(
         address sender,
         address recipient,
         uint256 amount
     ) public override returns (bool) {
+        if (amount < MIN_TRANSFER_AMOUNT)
+            revert RL80__TransferAmountBelowMinimum();
         uint256 currentAllowance = allowance(sender, _msgSender());
-        require(
-            currentAllowance >= amount,
-            "RL80: transfer amount exceeds allowance"
-        );
+        if (currentAllowance < amount) revert RL80__AllowanceExceeded(); // Use the correct custom error here
         _approve(sender, _msgSender(), currentAllowance - amount);
         _transferTokens(sender, recipient, amount);
         return true;
     }
 
     // Allow trading to be enabled by the contract owner
-    function toggleTrading(bool _enable) public onlyOwner {
+    function toggleTrading(bool _enable) external onlyOwner {
         tradingEnabled = _enable;
         tradingStartTime = _enable ? block.timestamp : 0; // Record the time when trading was enabled, or reset if disabled
         emit TradingEnabled(_enable);

@@ -3,7 +3,7 @@
 // @dev This contract has been adapted to fit with dappTools
 pragma solidity ^0.8.21;
 
-import {ERC20} from "lib/@openzeppelin/contracts/token/ERC20/ERC20.sol";
+import {ERC20} from "lib/solmate/src/tokens/ERC20.sol";
 
 interface ERC677Receiver {
     function onTokenTransfer(
@@ -17,7 +17,7 @@ contract LinkToken is ERC20 {
     uint256 constant INITIAL_SUPPLY = 1000000000000000000000000;
     uint8 constant DECIMALS = 18;
 
-    constructor() ERC20("LinkToken", "LINK") {
+    constructor() ERC20("LinkToken", "LINK", DECIMALS) {
         _mint(msg.sender, INITIAL_SUPPLY);
     }
 
