@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.21;
 
-import {Script, console} from "lib/forge-std/src/Script.sol";
+import {Script, console} from "forge-std/Script.sol";
 import {HelperConfig} from "./HelperConfig.s.sol";
 import {RL80} from "../src/RL80.sol";
-import {DevOpsTools} from "lib/foundry-devops/src/DevOpsTools.sol";
-import {VRFCoordinatorV2Mock} from "lib/@chainlink/contracts/src/v0.8/mocks/VRFCoordinatorV2Mock.sol";
+import {DevOpsTools} from "foundry-devops/src/DevOpsTools.sol";
+import {VRFCoordinatorV2Mock} from "@chainlink/contracts/src/v0.8/mocks/VRFCoordinatorV2Mock.sol";
 import {LinkToken} from "../test/mocks/LinkToken.sol";
 
 contract CreateSubscription is Script {
@@ -73,7 +73,7 @@ contract AddConsumer is Script {
 
     function run() external {
         address mostRecentlyDeployed = DevOpsTools.get_most_recent_deployment(
-            "Raffle",
+            "RL80",
             block.chainid
         );
         addConsumerUsingConfig(mostRecentlyDeployed);

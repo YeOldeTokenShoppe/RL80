@@ -6,6 +6,7 @@ solc_version = "0.8.21"
 solc_optimize = true
 solc_optimize_runs = 200
 
+remappings = [ "forge-std/=lib/forge-std/", "@chainlink/contracts/=lib/@chainlink/contracts/", "@openzeppelin/contracts/=lib/@openzeppelin/contracts/" ]
 [fuzz]
 runs = 1000
 

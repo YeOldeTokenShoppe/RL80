@@ -10,11 +10,9 @@ pragma solidity ^0.8.21;
 
 import {VRFCoordinatorV2Mock} from "lib/@chainlink/contracts/src/v0.8/mocks/VRFCoordinatorV2Mock.sol";
 import {LinkToken} from "../test/mocks/LinkToken.sol";
-import {Script} from "lib/forge-std/src/Script.sol";
+import {Script} from "lib/forge-std/Script.sol";
 
 contract HelperConfig is Script {
-    NetworkConfig public activeNetworkConfig;
-
     struct NetworkConfig {
         uint64 subscriptionId;
         bytes32 keyHash;
@@ -26,6 +24,8 @@ contract HelperConfig is Script {
 
     uint256 public DEFAULT_ANVIL_PRIVATE_KEY =
         0xac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80;
+
+    NetworkConfig public activeNetworkConfig;
 
     event HelperConfig__CreatedMockVRFCoordinator(address vrfCoordinator);
 
@@ -43,7 +43,7 @@ contract HelperConfig is Script {
         returns (NetworkConfig memory mainnetNetworkConfig)
     {
         mainnetNetworkConfig = NetworkConfig({
-            subscriptionId: 6725, // If left as 0, our scripts will create one!
+            subscriptionId: 0, // If left as 0, our scripts will create one!
             keyHash: 0x9fe0eebf5e446e3c998ec9bb19951541aee00bb90ea201ae456421a2ded86805,
             callbackGasLimit: 500000, // 500,000 gas
             vrfCoordinatorV2: 0x271682DEB8C4E0901D1a1550aD2e64D568E69909,
@@ -58,7 +58,7 @@ contract HelperConfig is Script {
         returns (NetworkConfig memory sepoliaNetworkConfig)
     {
         sepoliaNetworkConfig = NetworkConfig({
-            subscriptionId: 7826, // If left as 0, our scripts will create one!
+            subscriptionId: 8097, // If left as 0, our scripts will create one!
             keyHash: 0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c,
             callbackGasLimit: 500000, // 500,000 gas
             vrfCoordinatorV2: 0x8103B0A8A00be2DDC778e6e7eaa21791Cd364625,
