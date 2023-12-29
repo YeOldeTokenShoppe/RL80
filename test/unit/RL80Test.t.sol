@@ -20,7 +20,6 @@ contract RL80Test is Test {
         uint256 timestamp
     );
 
-    error RL80__NoWinningNumbers();
     error RL80__TradingNotEnabled();
     error RL80__ExceedsMaximumHoldingAmount();
     error RL80__AllowanceExceeded();
@@ -29,26 +28,26 @@ contract RL80Test is Test {
     HelperConfig public helperConfig;
     DeployRL80 deployer;
 
-    uint64 subscriptionId;
-    bytes32 keyHash;
-    uint32 callbackGasLimit;
-    address vrfCoordinatorV2;
+    uint64 VRF_SUBSCRIPTION_ID;
+    bytes32 VRF_GAS_LANE;
+    uint32 VRF_GAS_LIMIT;
+    address VRF_COORDINATORV2;
     address link;
     uint256 deployerKey;
 
     uint256 public constant STARTING_USER_BALANCE = 10000 * 10 ** 18;
     uint256 public constant MAX_TAX_RATE = 500; // Maximum tax rate of 5% for safety
 
-    uint256 public taxRate = 300; // 3% initial tax rate
-    uint256 public reducedTaxRate = 100; // 1% reduced tax
+    uint256 public s_taxRate = 300; // 3% initial tax rate
+    uint256 public s_reducedTaxRate = 100; // 1% reduced tax
     uint256 public constant TAX_DURATION = 40 days; // Duration of the tax period after trading is enabled
     uint256 public constant MAX_HOLDING = MAX_SUPPLY / 100; // 1% of total supply
 
-    address public constant TREASURY =
-        address(0x70997970C51812dc3A010C7d01b50e0d17dc79C8);
+    address public constant s_treasury =
+        address(0xA8d191d2CE9784CE2bC9804d00195BE2805715C0);
 
     uint256 public constant MAX_SUPPLY = 10_000_000_000 * 10 ** 18; // 10 billion tokens
-    uint256 public tradingStartTime;
+    uint256 public s_tradingStartTime;
 
     modifier skipFork() {
         if (block.chainid != 31337) {
@@ -63,21 +62,17 @@ contract RL80Test is Test {
         (rL80, helperConfig) = deployer.run();
 
         (
-            subscriptionId,
-            keyHash,
-            callbackGasLimit,
-            vrfCoordinatorV2, //link
+            VRF_SUBSCRIPTION_ID,
+            VRF_GAS_LANE,
+            VRF_GAS_LIMIT,
+            VRF_COORDINATORV2, //link
             //deployerKey
             ,
 
         ) = helperConfig.activeNetworkConfig();
 
-        rL80.toggleTrading(true);
-        tradingStartTime = block.timestamp;
-
-        console.log("The test contact address is :", address(this));
-        console.log("Contract balance:", rL80.balanceOf(address(this)));
-        //Enable trading
+        // rL80.toggleTrading(true);
+        s_tradingStartTime = block.timestamp;
     }
 
     function testOwnershipTransfer() public {
@@ -110,7 +105,7 @@ contract RL80Test is Test {
 
     // Test: Verify that Alice's balance increases by the expected amount after Bob's transfer.
     function testAliceReceivesCorrectAmountPostTax() public {
-        vm.warp(tradingStartTime + 1); // Ensure within tax period
+        vm.warp(s_tradingStartTime + 1); // Ensure within tax period
 
         address bob = address(1);
         address alice = address(2);
@@ -119,7 +114,7 @@ contract RL80Test is Test {
         rL80.transfer(bob, STARTING_USER_BALANCE); // Give Bob some tokens to transfer
 
         // Calculate the expected amount Alice should receive after tax
-        uint256 taxAmount = (transferAmount * taxRate) / 10000;
+        uint256 taxAmount = (transferAmount * s_taxRate) / 10000;
         uint256 expectedTransferAmount = transferAmount - taxAmount;
 
         // Imitate Bob and transfer tokens to Alice
@@ -132,15 +127,15 @@ contract RL80Test is Test {
 
     // Test: Verify that Treasury's balance increases by the tax amount after transfer.
     function testTreasuryReceivesTax() public {
-        vm.warp(tradingStartTime + 1); // Ensure within tax period
+        vm.warp(s_tradingStartTime + 1); // Ensure within tax period
 
         address bob = address(1);
-        address treasury = TREASURY;
+        address treasury = s_treasury;
 
         uint256 initialTreasuryBalance = rL80.balanceOf(treasury);
         rL80.transfer(bob, STARTING_USER_BALANCE); // Give Bob tokens to transfer
 
-        uint256 taxAmount = (1000 * 10 ** 18 * taxRate) / 10000;
+        uint256 taxAmount = (1000 * 10 ** 18 * s_taxRate) / 10000;
 
         // Imitate Bob and transfer tokens
         vm.prank(bob);
@@ -153,7 +148,7 @@ contract RL80Test is Test {
 
     // Test: Verify that Bob's balance decreases by the transferred amount after sending to Alice.
     function testBobBalanceDecreasesByTransferAmount() public {
-        vm.warp(tradingStartTime + 1); // Ensure within tax period
+        vm.warp(s_tradingStartTime + 1); // Ensure within tax period
 
         address bob = address(1);
         address alice = address(2);
@@ -173,21 +168,21 @@ contract RL80Test is Test {
     }
 
     function testTradingIsEnabled() public {
-        bool isTradingEnabled = rL80.tradingEnabled(); // Assuming there's a public getter for the bool tradingEnabled
+        bool isTradingEnabled = rL80.s_tradingEnabled(); // Assuming there's a public getter for the bool tradingEnabled
         assertTrue(isTradingEnabled);
     }
 
     function testTaxWindowIsActive() public {
         uint256 currentTime = block.timestamp;
         assertTrue(
-            currentTime >= rL80.tradingStartTime() &&
-                currentTime <= rL80.tradingStartTime() + rL80.TAX_DURATION()
+            currentTime >= rL80.s_tradingStartTime() &&
+                currentTime <= rL80.s_tradingStartTime() + rL80.TAX_DURATION()
         );
     }
 
     function testTreasuryAddress() public {
-        address treasuryAddress = rL80.treasury(); // Assuming there's a public getter for the treasury address
-        assertEq(treasuryAddress, TREASURY);
+        address treasuryAddress = rL80.s_treasury(); // Assuming there's a public getter for the treasury address
+        assertEq(treasuryAddress, s_treasury);
     }
 
     function testTaxDeductionLogic() public {
@@ -198,15 +193,15 @@ contract RL80Test is Test {
 
         uint256 initialBobBalance = rL80.balanceOf(bob);
         uint256 initialAliceBalance = rL80.balanceOf(alice);
-        uint256 initialTreasuryBalance = rL80.balanceOf(TREASURY);
+        uint256 initialTreasuryBalance = rL80.balanceOf(s_treasury);
 
         vm.prank(bob);
         rL80.transfer(alice, amountToTransfer);
 
-        uint256 taxAmount = (amountToTransfer * taxRate) / 10000; // Adjust for TAX_RATE unit
+        uint256 taxAmount = (amountToTransfer * s_taxRate) / 10000; // Adjust for TAX_RATE unit
         uint256 finalBobBalance = rL80.balanceOf(bob);
         uint256 finalAliceBalance = rL80.balanceOf(alice);
-        uint256 finalTreasuryBalance = rL80.balanceOf(TREASURY);
+        uint256 finalTreasuryBalance = rL80.balanceOf(s_treasury);
 
         // Check that Bob's balance is reduced by the full amount, including tax
         assertEq(finalBobBalance, initialBobBalance - amountToTransfer);
@@ -291,7 +286,7 @@ contract RL80Test is Test {
         address bob = address(1);
         address alice = address(2);
         uint256 transferAmount = 1000 * 10 ** 18; // Adjust as per your token's decimals
-        uint256 taxAmount = (transferAmount * taxRate) / 10000;
+        uint256 taxAmount = (transferAmount * s_taxRate) / 10000;
         // Transfer tokens to Bob
         rL80.transfer(bob, transferAmount);
 
@@ -322,82 +317,36 @@ contract RL80Test is Test {
         rL80.transferFrom(bob, alice, transferAmount); // Should revert
     }
 
-    // function testRequestRandomWords() public skipFork {
-    //     vm.recordLogs();
-    //     uint256 emittedRequestId = rL80.requestRandomWords();
-    //     console.log("Emitted Request ID:", emittedRequestId);
-
-    //     Vm.Log[] memory logs = vm.getRecordedLogs();
-    //     assertTrue(logs.length > 0, "No logs recorded");
-
-    //     bool found = false;
-    //     for (uint i = 0; i < logs.length; i++) {
-    //         if (logs[i].topics.length > 2) {
-    //             // Convert the topic (bytes32) to bytes for decoding
-    //             bytes memory topicBytes = abi.encodePacked(logs[i].topics[2]);
-    //             uint256 logRequestId = abi.decode(topicBytes, (uint256));
-    //             console.log("Log Topic[2] decoded:", logRequestId);
-
-    //             if (logRequestId == emittedRequestId) {
-    //                 found = true;
-    //                 break;
-    //             }
-    //         }
-    //     }
-
-    //     assertTrue(
-    //         found,
-    //         "RequestSent event log with matching requestId not found"
-    //     );
-    //     assertEq(
-    //         rL80.lastRequestId(),
-    //         emittedRequestId,
-    //         "lastRequestId does not match emitted requestId"
-    //     );
-    // }
-
     function testFulfillRandomWordsGetsRequestId(
         uint256 randomRequestId
     ) public skipFork {
         // address vrfCoordinatorV2 = 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0;
         vm.expectRevert("nonexistent request");
-        VRFCoordinatorV2Mock(vrfCoordinatorV2).fulfillRandomWords(
+        VRFCoordinatorV2Mock(VRF_COORDINATORV2).fulfillRandomWords(
             randomRequestId,
             address(rL80)
         );
     }
 
-    function testFulfillRandomWords() public skipFork {
-        // Deploy the mock VRF Coordinator
-        // address vrfCoordinatorV2 = 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0;
-
-        // Make a request for random words
-        uint256 requestId = rL80.requestRandomWords();
-
-        // Use the mock VRF Coordinator to simulate the fulfillment
-        VRFCoordinatorV2Mock(vrfCoordinatorV2).fulfillRandomWords(
-            requestId,
-            address(rL80)
-        );
-
-        // Get the request details
-        (bool fulfilled, bool exists /*uint256[] memory randomWords*/, ) = rL80
-            .getRequestDetails(requestId);
-
-        // Perform your assertions
-        assertTrue(exists, "Request does not exist");
-        assertTrue(fulfilled, "Request was not fulfilled");
-    }
-
     function testWinningNumberRecordedCorrectly() public skipFork {
-        // Deploy the mock VRF Coordinator
-        // address vrfCoordinatorV2 = 0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0;
+        // Set up conditions for checkUpkeep to return true
+        // Arrange: Set the time to Sunday at midnight
+        address treasury = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8;
+        rL80.transfer(treasury, 1000000 * 10 ** 18);
+        uint256 currentDay = (block.timestamp / 86400 + 4) % 7;
+        uint256 daysToNextSunday = (7 - currentDay) % 7;
+        if (daysToNextSunday == 0) {
+            daysToNextSunday = 7; // If today is Sunday, warp to next Sunday
+        }
+        uint256 nextSundayMidnight = block.timestamp + daysToNextSunday * 86400;
+        vm.warp(nextSundayMidnight);
 
-        // Make a request for random words
-        uint256 requestId = rL80.requestRandomWords();
+        // Call performUpkeep and get the request ID
+        uint256 requestId = rL80.performUpkeep("");
+        assertTrue(requestId > 0, "Request ID should be greater than zero");
 
-        // Use the mock VRF Coordinator to simulate the fulfillment
-        VRFCoordinatorV2Mock(vrfCoordinatorV2).fulfillRandomWords(
+        // Simulate the VRF Coordinator fulfilling the request
+        VRFCoordinatorV2Mock(VRF_COORDINATORV2).fulfillRandomWords(
             requestId,
             address(rL80)
         );
@@ -406,16 +355,16 @@ contract RL80Test is Test {
         (bool fulfilled, bool exists, uint256[] memory randomWords) = rL80
             .getRequestDetails(requestId);
 
-        // Check if the request was fulfilled and exists
+        // Assert that the request was fulfilled and exists
         assertTrue(fulfilled, "Request was not fulfilled");
         assertTrue(exists, "Request does not exist");
 
-        // Check if a random word was recorded
+        // Assert that a random word was recorded
         assertTrue(randomWords.length > 0, "No random word recorded");
     }
 
     function testTaxIsReducedAfterTaxDuration() public {
-        vm.warp(tradingStartTime + rL80.TAX_DURATION() + 1); // Warp to after tax duration
+        vm.warp(s_tradingStartTime + rL80.TAX_DURATION() + 1); // Warp to after tax duration
 
         address bob = address(1);
         address alice = address(2);
@@ -424,7 +373,7 @@ contract RL80Test is Test {
         rL80.transfer(bob, STARTING_USER_BALANCE); // Give Bob some tokens to transfer
 
         // Calculate the expected amount Alice should receive after tax
-        uint256 taxAmount = (transferAmount * reducedTaxRate) / 10000;
+        uint256 taxAmount = (transferAmount * s_reducedTaxRate) / 10000;
         uint256 expectedTransferAmount = transferAmount - taxAmount;
 
         // Imitate Bob and transfer tokens to Alice
@@ -435,43 +384,23 @@ contract RL80Test is Test {
         assertEq(rL80.balanceOf(alice), expectedTransferAmount);
 
         // Assert that the tax rate is reduced
-        assertEq(rL80.reducedTaxRate(), 100); // Assuming the reduced tax rate is 1%
+        assertEq(rL80.s_reducedTaxRate(), 100); // Assuming the reduced tax rate is 1%
     }
 
     function testFailTransferExceedsMaximumHoldingAmount() public {
         address bob = address(1);
         address alice = address(2);
 
-        // Log the initial balances of Bob and Alice
-        console.log("Initial Bob balance:", rL80.balanceOf(bob));
-        console.log("Initial Alice balance:", rL80.balanceOf(alice));
-        console.log("Max Holding:", MAX_HOLDING);
-
         // Transfer tokens to Bob
         rL80.transfer(bob, MAX_HOLDING);
-
-        // Log Bob's balance after transfer
-        console.log("Bob balance after transfer:", rL80.balanceOf(bob));
 
         // Attempt to transfer tokens from Bob to Alice
         vm.prank(bob);
         rL80.transfer(alice, MAX_HOLDING);
 
-        // Log Alice's balance after first transfer
-        console.log(
-            "Alice balance after first transfer:",
-            rL80.balanceOf(alice)
-        );
-
         // Attempt second transfer from Bob to Alice
         vm.prank(bob);
         rL80.transfer(alice, MAX_HOLDING);
-
-        // Log Alice's balance after second transfer
-        console.log(
-            "Alice balance after second transfer:",
-            rL80.balanceOf(alice)
-        );
     }
 
     function testSetTaxRates() public {
@@ -480,8 +409,8 @@ contract RL80Test is Test {
 
         rL80.setTaxRates(newTaxRate, newReducedTaxRate);
 
-        assertEq(rL80.taxRate(), newTaxRate);
-        assertEq(rL80.reducedTaxRate(), newReducedTaxRate);
+        assertEq(rL80.s_taxRate(), newTaxRate);
+        assertEq(rL80.s_reducedTaxRate(), newReducedTaxRate);
     }
 
     function testFailSetTaxRatesAbove500() public {
@@ -499,16 +428,16 @@ contract RL80Test is Test {
         assertEq(rL80.balanceOf(address(2)), 1000 * 10 ** 18);
     }
 
-    function testRequestRandomWordsReturnsRequestId() public {
-        uint256 requestId = rL80.requestRandomWords();
-        assertEq(rL80.lastRequestId(), requestId);
-    }
+    // function testRequestRandomWordsReturnsRequestId() public {
+    //     uint256 requestId = rL80.requestRandomWords();
+    //     assertEq(rL80.lastRequestId(), requestId);
+    // }
 
     function testTransferOverTransferMinimum() public {
         address bob = address(1);
         address alice = address(2);
         uint256 transferAmount = 1000 * 10 ** 18; // Adjust as per your token's decimals
-        uint256 taxAmount = (transferAmount * taxRate) / 10000;
+        uint256 taxAmount = (transferAmount * s_taxRate) / 10000;
         // Transfer tokens to Bob
         rL80.transfer(bob, transferAmount);
 
@@ -542,12 +471,12 @@ contract RL80Test is Test {
         rL80.transferFrom(owner, recipient, transferAmount); // Should revert with RL80__AllowanceExceeded
     }
 
-    function testRequestRandomWordsCannotBeCalledbyNonOwner() public {
-        address nonOwner = address(2);
-        vm.prank(nonOwner);
-        vm.expectRevert("Ownable: caller is not the owner");
-        rL80.requestRandomWords();
-    }
+    // function testRequestRandomWordsCannotBeCalledbyNonOwner() public {
+    //     address nonOwner = address(2);
+    //     vm.prank(nonOwner);
+    //     vm.expectRevert("Ownable: caller is not the owner");
+    //     rL80.requestRandomWords();
+    // }
 
     function testTransferIfAllowanceNotExceeded() public {
         address owner = address(1);
@@ -568,44 +497,236 @@ contract RL80Test is Test {
         rL80.transferFrom(owner, recipient, transferAmount); // Should succeed
     }
 
-    // function testTokensBurnedEvent() public {
-    //     address burner = address(1);
-    //     uint256 burnAmount = 100 * 10 ** 18; // Adjust as per your token's decimals
+    function testTokensBurnedEvent() public {
+        address burner = address(1);
+        uint256 burnAmount = 100 * 10 ** 18; // Adjust as per your token's decimals
 
-    //     // Transfer tokens to the burner for the burn operation
-    //     rL80.transfer(burner, burnAmount);
+        // Transfer tokens to the burner for the burn operation
+        rL80.transfer(burner, burnAmount);
 
-    //     // Simulate the burner burning some tokens
-    //     vm.recordLogs();
-    //     vm.prank(burner);
-    //     rL80.burn(burnAmount); // Replace with your contract's burn function call
+        // Simulate the burner burning some tokens
+        vm.recordLogs();
+        vm.prank(burner);
+        rL80.burn(burnAmount); // Replace with your contract's burn function call
 
-    //     // Retrieve and check the logs
-    //     Vm.Log[] memory logs = vm.getRecordedLogs();
-    //     assertEq(logs.length, 2, "Incorrect number of logs emitted");
+        // Retrieve and check the logs
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        assertEq(logs.length, 2, "Incorrect number of logs emitted");
 
-    //     // Check the TokensBurned event
-    //     bytes32 expectedEventSignature = keccak256(
-    //         "TokensBurned(address,uint256,uint256)"
-    //     );
-    //     assertEq(
-    //         logs[1].topics[0],
-    //         expectedEventSignature,
-    //         "Incorrect event signature"
-    //     );
+        // Check the TokensBurned event
+        bytes32 expectedEventSignature = keccak256(
+            "TokensBurned(address,uint256,uint256)"
+        );
+        assertEq(
+            logs[1].topics[0],
+            expectedEventSignature,
+            "Incorrect event signature"
+        );
 
-    //     // Correctly extract and compare the burner address from the log
-    //     address loggedBurnerAddress = address(
-    //         uint160(uint256(logs[1].topics[1]))
-    //     );
-    //     assertEq(loggedBurnerAddress, burner, "Incorrect burner address");
+        // Correctly extract and compare the burner address from the log
+        address loggedBurnerAddress = address(
+            uint160(uint256(logs[1].topics[1]))
+        );
+        assertEq(loggedBurnerAddress, burner, "Incorrect burner address");
 
-    //     // Decode the data field for amount and timestamp
-    //     (uint256 loggedAmount, uint256 loggedTimestamp) = abi.decode(
-    //         logs[1].data,
-    //         (uint256, uint256)
-    //     );
-    //     assertEq(loggedAmount, burnAmount, "Incorrect burn amount");
-    //     // Timestamp check might need adjustment based on how your contract emits the event
-    // }
+        // Decode the data field for amount and timestamp
+        (uint256 loggedAmount /*uint256 loggedTimestamp*/, ) = abi.decode(
+            logs[1].data,
+            (uint256, uint256)
+        );
+        assertEq(loggedAmount, burnAmount, "Incorrect burn amount");
+        // Timestamp check might need adjustment based on how your contract emits the event
+    }
+
+    function testCheckUpkeepReturnsFalseIfItHasNoBalance() public {
+        // Arrange: Set the time to Sunday at midnight
+        uint256 currentDay = (block.timestamp / 86400 + 4) % 7;
+        uint256 daysToNextSunday = (7 - currentDay) % 7;
+        if (daysToNextSunday == 0) {
+            daysToNextSunday = 7; // If today is Sunday, warp to next Sunday
+        }
+        uint256 nextSundayMidnight = block.timestamp + daysToNextSunday * 86400;
+        vm.warp(nextSundayMidnight);
+
+        // Ensure the treasury has no balance
+        // Note: This depends on how your contract handles token balances.
+        // You might need to transfer tokens out of the treasury or set it up accordingly.
+
+        // Act: Call checkUpkeep
+        (bool upkeepNeeded, ) = rL80.checkUpkeep("");
+
+        // Assert: checkUpkeep should return false
+        assert(!upkeepNeeded);
+    }
+
+    function testCheckUpkeepReturnsFalseIfLotteryIsntOpen() public {
+        // Arrange: Set the time to Sunday at midnight
+        uint256 currentDay = (block.timestamp / 86400 + 4) % 7;
+        uint256 daysToNextSunday = (7 - currentDay) % 7;
+        if (daysToNextSunday == 0) {
+            daysToNextSunday = 7; // If today is Sunday, warp to next Sunday
+        }
+        uint256 nextSundayMidnight = block.timestamp + daysToNextSunday * 86400;
+        vm.warp(nextSundayMidnight);
+
+        // Ensure the treasury has a balance
+        // Note: This depends on how your contract handles token balances.
+        // You might need to transfer tokens out of the treasury or set it up accordingly.
+
+        // Act: Call checkUpkeep
+        (bool upkeepNeeded, ) = rL80.checkUpkeep("");
+
+        // Assert: checkUpkeep should return false
+        assert(!upkeepNeeded);
+    }
+
+    function testCheckUpkeepReturnsTrueWhenParametersGood() public skipFork {
+        // Transfer tokens to the treasury
+        address treasury = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8;
+        rL80.transfer(treasury, 1000000 * 10 ** 18);
+
+        // Set the time to the next Sunday at midnight
+        uint256 currentDay = (block.timestamp / 86400 + 4) % 7;
+        uint256 daysToNextSunday = (7 - currentDay) % 7;
+        uint256 nextSundayMidnight = block.timestamp + daysToNextSunday * 86400;
+        if (daysToNextSunday == 0) {
+            nextSundayMidnight += 7 * 86400; // If today is Sunday, warp to next Sunday
+        }
+        vm.warp(nextSundayMidnight);
+
+        // Call checkUpkeep
+        (bool upkeepNeeded, ) = rL80.checkUpkeep("");
+
+        // Assert: checkUpkeep should return true
+        assert(upkeepNeeded);
+    }
+
+    function testPerformUpkeepRevertsIfCheckUpkeepIsFalse() public skipFork {
+        // Arrange: Set the time to a day other than Sunday
+        uint256 currentDay = (block.timestamp / 86400 + 4) % 7;
+        uint256 daysToNextNonSunday = (currentDay == 0) ? 1 : 0; // If today is Sunday, warp to Monday
+        uint256 nextNonSundayMidnight = block.timestamp +
+            daysToNextNonSunday *
+            86400;
+        vm.warp(nextNonSundayMidnight);
+
+        // Act & Assert: Call performUpkeep and expect it to revert with the specific error
+        // Assuming the error RL80__UpkeepNotNeeded takes a single uint256 parameter which is 0
+        bytes memory expectedRevertData = abi.encodeWithSignature(
+            "RL80__UpkeepNotNeeded(uint256)",
+            0
+        );
+
+        vm.expectRevert(expectedRevertData);
+        rL80.performUpkeep("");
+    }
+
+    function testPerformUpkeepDoesNotRevertIfCheckUpkeepIsTrue()
+        public
+        skipFork
+    {
+        address treasury = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8;
+        rL80.transfer(treasury, 1000000 * 10 ** 18);
+        // Arrange: Set the time to Sunday at midnight
+        uint256 currentDay = (block.timestamp / 86400 + 4) % 7;
+        uint256 daysToNextSunday = (7 - currentDay) % 7;
+        if (daysToNextSunday == 0) {
+            daysToNextSunday = 7; // If today is Sunday, warp to next Sunday
+        }
+        uint256 nextSundayMidnight = block.timestamp + daysToNextSunday * 86400;
+        vm.warp(nextSundayMidnight);
+
+        // Act & Assert: Call performUpkeep and expect it not to revert
+        rL80.performUpkeep("");
+    }
+
+    function testPerformUpkeepEmitsRequestId() public skipFork {
+        address treasury = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8;
+        rL80.transfer(treasury, 1000000 * 10 ** 18);
+        // Arrange: Set the time to Sunday at midnight
+        uint256 currentDay = (block.timestamp / 86400 + 4) % 7;
+        uint256 daysToNextSunday = (7 - currentDay) % 7;
+        if (daysToNextSunday == 0) {
+            daysToNextSunday = 7; // If today is Sunday, warp to next Sunday
+        }
+        uint256 nextSundayMidnight = block.timestamp + daysToNextSunday * 86400;
+        vm.warp(nextSundayMidnight);
+
+        // Act: Call performUpkeep and record logs
+        vm.recordLogs();
+        rL80.performUpkeep("");
+
+        // Assert: RequestId event is emitted
+        Vm.Log[] memory logs = vm.getRecordedLogs();
+        bool foundRequestIdEvent = false;
+        for (uint i = 0; i < logs.length; i++) {
+            if (logs[i].topics[0] == keccak256("RequestSent(uint256,uint32)")) {
+                foundRequestIdEvent = true;
+                break;
+            }
+        }
+        if (!foundRequestIdEvent) {
+            revert("RequestSent event not emitted");
+        }
+    }
+
+    function testFulfillRandomWordsCanOnlyBeCalledAfterPerformUpkeep()
+        public
+        skipFork
+    {
+        // Arrange
+        // Act / Assert
+        vm.expectRevert("nonexistent request");
+        // vm.mockCall could be used here...
+        VRFCoordinatorV2Mock(VRF_COORDINATORV2).fulfillRandomWords(
+            0,
+            address(rL80)
+        );
+
+        vm.expectRevert("nonexistent request");
+
+        VRFCoordinatorV2Mock(VRF_COORDINATORV2).fulfillRandomWords(
+            1,
+            address(rL80)
+        );
+    }
+
+    function testExemptFromMaxHolding() public {
+        address treasury = 0x70997970C51812dc3A010C7d01b50e0d17dc79C8;
+        // Arrange: Calculate an amount greater than 1% of MAX_SUPPLY
+        uint256 excessAmount = rL80.MAX_SUPPLY() / 100 + 1; // 1% of MAX_SUPPLY plus 1
+
+        // Act: Transfer excess amount to exempt addresses
+        rL80.transfer(treasury, excessAmount);
+        rL80.transfer(address(rL80), excessAmount); // If the contract itself is exempt
+
+        // Assert: Check if the balances of these addresses exceed the max holding
+        assert(rL80.balanceOf(treasury) > rL80.MAX_HOLDING());
+        assert(rL80.balanceOf(address(rL80)) > rL80.MAX_HOLDING());
+    }
+
+    function testFailIfNotExemptFromMaxHolding() public {
+        // Arrange: Calculate an amount close to but not exceeding 1% of MAX_SUPPLY
+        uint256 maxHolding = rL80.MAX_SUPPLY() / 100; // 1% of MAX_SUPPLY
+
+        // Calculate the gross amount to transfer to result in maxHolding after tax
+        uint256 initialAmount = (maxHolding * 10000) / (10000 - s_taxRate);
+        uint256 additionalAmount = 1; // Small amount to exceed the limit after tax
+
+        address nonExemptAddress = address(1);
+        address sender1 = address(2); // Or another address with sufficient tokens
+        address sender2 = address(3); // Or another address with sufficient tokens
+
+        // Ensure sender1 and sender2 have enough tokens
+        // Assuming setup steps to allocate tokens to sender1 and sender2
+
+        // Act: Transfer initial amount to non-exempt address
+        vm.prank(sender1);
+        rL80.transfer(nonExemptAddress, initialAmount);
+
+        // Assert: Attempt to transfer additional amount and expect it to revert
+        vm.expectRevert("RL80__ExceedsMaximumHoldingAmount");
+        vm.prank(sender2);
+        rL80.transfer(nonExemptAddress, additionalAmount);
+    }
 }

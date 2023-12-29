@@ -19,25 +19,25 @@ contract DeployRL80 is Script {
         // console.log("Account: ", account);
 
         (
-            uint64 subscriptionId,
-            bytes32 keyHash,
+            uint64 VRF_SUBSCRIPTION_ID,
+            bytes32 VRF_GAS_LANE,
             ,
-            address vrfCoordinatorV2,
+            address VRF_COORDINATORV2,
             address link,
             uint256 deployerKey
         ) = helperConfig.activeNetworkConfig();
 
-        if (subscriptionId == 0) {
+        if (VRF_SUBSCRIPTION_ID == 0) {
             CreateSubscription createSubscription = new CreateSubscription();
-            subscriptionId = createSubscription.createSubscription(
-                vrfCoordinatorV2,
+            VRF_SUBSCRIPTION_ID = createSubscription.createSubscription(
+                VRF_COORDINATORV2,
                 deployerKey
             );
 
             FundSubscription fundSubscription = new FundSubscription();
             fundSubscription.fundSubscription(
-                vrfCoordinatorV2,
-                subscriptionId,
+                VRF_COORDINATORV2,
+                VRF_SUBSCRIPTION_ID,
                 link,
                 deployerKey
             );
@@ -45,23 +45,23 @@ contract DeployRL80 is Script {
 
         vm.startBroadcast(deployerKey);
 
-        rL80 = new RL80(vrfCoordinatorV2, keyHash, subscriptionId);
+        rL80 = new RL80(VRF_COORDINATORV2, VRF_GAS_LANE, VRF_SUBSCRIPTION_ID);
         // Transfer minted supply to the Test Contract
         rL80.transfer(
-            address(0x34A1D3fff3958843C43aD80F30b94c510645C316), // Transfer tokens to the Test Contract
+            address(0x412B323356fcbF559D624376CF99Ba471A1C57B3), // Transfer tokens to the Test Contract
             10_000_000_000 * 1e18
         );
 
         rL80.transferOwnership(
-            address(0x34A1D3fff3958843C43aD80F30b94c510645C316)
+            address(0x412B323356fcbF559D624376CF99Ba471A1C57B3)
         );
 
         vm.stopBroadcast();
 
         addConsumer.addConsumer(
             address(rL80),
-            vrfCoordinatorV2,
-            subscriptionId,
+            VRF_COORDINATORV2,
+            VRF_SUBSCRIPTION_ID,
             deployerKey
         );
 
