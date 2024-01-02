@@ -16,6 +16,7 @@ contract HelperConfig is Script {
     struct NetworkConfig {
         uint64 VRF_SUBSCRIPTION_ID;
         bytes32 VRF_GAS_LANE;
+        uint256 automationUpdateInterval;
         uint32 VRF_GAS_LIMIT;
         address VRF_COORDINATORV2;
         address link;
@@ -43,8 +44,9 @@ contract HelperConfig is Script {
         returns (NetworkConfig memory mainnetNetworkConfig)
     {
         mainnetNetworkConfig = NetworkConfig({
-            VRF_SUBSCRIPTION_ID: 0, // If left as 0, our scripts will create one!
-            VRF_GAS_LANE: 0x9fe0eebf5e446e3c998ec9bb19951541aee00bb90ea201ae456421a2ded86805,
+            VRF_SUBSCRIPTION_ID: 899, // If left as 0, our scripts will create one!
+            VRF_GAS_LANE: 0xff8dedfbfa60af186cf3c830acbc32c05aae823045ae5ea7da1e45fbfaba4f92,
+            automationUpdateInterval: 1 weeks, // 1 week
             VRF_GAS_LIMIT: 500000, // 500,000 gas
             VRF_COORDINATORV2: 0x271682DEB8C4E0901D1a1550aD2e64D568E69909,
             link: 0x514910771AF9Ca656af840dff83E8264EcF986CA,
@@ -60,6 +62,7 @@ contract HelperConfig is Script {
         sepoliaNetworkConfig = NetworkConfig({
             VRF_SUBSCRIPTION_ID: 8097, // If left as 0, our scripts will create one!
             VRF_GAS_LANE: 0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c,
+            automationUpdateInterval: 600, // seconds
             VRF_GAS_LIMIT: 500000, // 500,000 gas
             VRF_COORDINATORV2: 0x8103B0A8A00be2DDC778e6e7eaa21791Cd364625,
             link: 0x779877A7B0D9E8603169DdbD7836e478b4624789,
@@ -95,6 +98,7 @@ contract HelperConfig is Script {
         anvilNetworkConfig = NetworkConfig({
             VRF_SUBSCRIPTION_ID: 0, // If left as 0, our scripts will create one!
             VRF_GAS_LANE: 0x474e34a077df58807dbe9c96d3c009b23b3c6d0cce433e59bbf5b34f823bc56c, // doesn't really matter
+            automationUpdateInterval: 300, // 30 seconds
             VRF_GAS_LIMIT: 500000, // 500,000 gas
             VRF_COORDINATORV2: address(vrfCoordinatorV2Mock),
             link: address(link),

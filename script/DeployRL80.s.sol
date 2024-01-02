@@ -21,6 +21,7 @@ contract DeployRL80 is Script {
         (
             uint64 VRF_SUBSCRIPTION_ID,
             bytes32 VRF_GAS_LANE,
+            uint256 automationUpdateInterval,
             ,
             address VRF_COORDINATORV2,
             address link,
@@ -45,15 +46,19 @@ contract DeployRL80 is Script {
 
         vm.startBroadcast(deployerKey);
 
-        rL80 = new RL80(VRF_COORDINATORV2, VRF_GAS_LANE, VRF_SUBSCRIPTION_ID);
-        // Transfer minted supply to the Test Contract
+        rL80 = new RL80(
+            VRF_COORDINATORV2,
+            VRF_GAS_LANE,
+            automationUpdateInterval
+        );
+        // Transfer minted supply to the Test Contract or the deployer
         rL80.transfer(
-            address(0x412B323356fcbF559D624376CF99Ba471A1C57B3), // Transfer tokens to the Test Contract
+            address(0x5Ad34D42bAF12ABBFA65B7649C58235C0Db75D6C),
             10_000_000_000 * 1e18
         );
 
         rL80.transferOwnership(
-            address(0x412B323356fcbF559D624376CF99Ba471A1C57B3)
+            address(0x5Ad34D42bAF12ABBFA65B7649C58235C0Db75D6C)
         );
 
         vm.stopBroadcast();

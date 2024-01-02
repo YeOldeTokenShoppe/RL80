@@ -1,3 +1,8 @@
+/* 𝓞𝖚𝖗 𝕷𝖆𝖉𝖞  ͦᶠ 𝕻𝖊𝖗𝖕𝖊𝖙𝖚𝖆𝖑 𝕻𝖗𝖔𝖋𝖎𝖙
+Website: https://ourlady.io
+Telegram: https://t.me/ourladytoken
+Twitter: https://twitter.com/ourladytoken */
+
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.21;
 
@@ -6,8 +11,15 @@ import {ERC20Burnable} from "@openzeppelin/contracts/token/ERC20/extensions/ERC2
 import {Ownable} from "@openzeppelin/contracts/access/Ownable.sol";
 import {VRFConsumerBaseV2} from "@chainlink/contracts/src/v0.8/vrf/VRFConsumerBaseV2.sol";
 import {VRFCoordinatorV2Interface} from "@chainlink/contracts/src/v0.8/interfaces/VRFCoordinatorV2Interface.sol";
+import {AutomationCompatibleInterface} from "@chainlink/contracts/src/v0.8/interfaces/AutomationCompatibleInterface.sol";
 
-contract RL80 is ERC20, ERC20Burnable, VRFConsumerBaseV2, Ownable {
+contract RL80 is
+    ERC20,
+    ERC20Burnable,
+    VRFConsumerBaseV2,
+    Ownable,
+    AutomationCompatibleInterface
+{
     // STRUCTS
 
     struct RequestStatus {
@@ -21,60 +33,70 @@ contract RL80 is ERC20, ERC20Burnable, VRFConsumerBaseV2, Ownable {
     error RL80__TradingNotEnabled();
     error RL80__ExceedsMaximumHoldingAmount();
     error RL80__AllowanceExceeded();
-    error RL80__UpkeepNotNeeded(uint256 minimumTokenBalance);
+    error RL80__UpkeepNotNeeded();
 
     // MAPPINGS & EVENTS
 
     mapping(uint256 => RequestStatus) private requests; // requestId -> RequestStatus
-    mapping(uint256 => uint256) public sequenceOfWinningNumbers;
 
     event TradingEnabled(bool enabled);
-    event RequestSent(uint256 requestId, uint32 numWords);
-    event RequestFulfilled(uint256 requestId, uint256[] randomWords);
+    event RequestSent(uint256 requestId);
+    event RequestFulfilled(
+        uint256 requestId,
+        uint256[] randomWords,
+        uint256 indexed timestamp
+    );
     event TokensBurned(
         address indexed burnerAddress,
         uint256 amount,
-        uint256 timestamp
+        uint256 indexed timestamp
     );
 
     // IMMUTABLE STORAGE
 
     uint256 public constant MAX_SUPPLY = 10_000_000_000 * 10 ** 18; // 10 billion tokens
     uint256 public constant MAX_HOLDING = MAX_SUPPLY / 100; // 1% of total supply
-    uint256 public constant MAX_TAX_RATE = 500; // Maximum tax rate of 5% for safety
+    uint256 public constant MAX_TAX_RATE = 500; // Maximum tax rate of 5%
     uint256 public constant TAX_DURATION = 40 days; // Duration of the tax period after trading is enabled
 
     // MUTABLE STORAGE
 
     uint256 public s_taxRate = 300;
     uint256 public s_reducedTaxRate = 100;
-    address public s_treasury = 0xA8d191d2CE9784CE2bC9804d00195BE2805715C0;
+    address public s_treasury;
     address public s_initialOwner = msg.sender;
     bool public s_tradingEnabled = false;
     uint256[] public s_requestIds;
     uint256 public s_lastRequestId;
-    uint256 public s_drawingWeek = 0;
-    uint256[] public s_winningNumbers;
     uint256 public s_tradingStartTime;
+    uint256 private s_lastTimeStamp;
+    uint256 private i_interval;
+    bool private upkeepLock;
+    uint256 private lastUpkeepTimestamp;
 
     // VRF CONSTANTS & IMMUTABLE
 
     VRFCoordinatorV2Interface private immutable VRF_COORDINATORV2;
-    uint64 private immutable VRF_SUBSCRIPTION_ID = 8097;
+    uint64 private immutable VRF_SUBSCRIPTION_ID = 899;
     bytes32 private immutable VRF_GAS_LANE;
-    uint32 private immutable VRF_GAS_LIMIT = 100000;
+    uint32 private immutable VRF_GAS_LIMIT = 500000;
     uint16 private constant VRF_REQUEST_CONFIRMATIONS = 3;
     uint32 private constant VRF_NUM_WORDS = 1;
 
     constructor(
         address _vrfCoordinator,
         bytes32 _keyHash,
-        uint64 _subscriptionId
-    ) ERC20("OurLady", "RL80") VRFConsumerBaseV2(_vrfCoordinator) {
+        uint256 interval
+    )
+        // uint64 _subscriptionId
+        ERC20("OurLady", "RL80")
+        VRFConsumerBaseV2(_vrfCoordinator)
+    {
         VRF_COORDINATORV2 = VRFCoordinatorV2Interface(_vrfCoordinator);
-        VRF_SUBSCRIPTION_ID = _subscriptionId;
         VRF_GAS_LANE = _keyHash;
         _mint(msg.sender, MAX_SUPPLY);
+        i_interval = interval;
+        s_lastTimeStamp = block.timestamp;
     }
 
     // ACTIONS
@@ -162,33 +184,21 @@ contract RL80 is ERC20, ERC20Burnable, VRFConsumerBaseV2, Ownable {
     function checkUpkeep(
         bytes memory /* checkData */
     ) public view returns (bool upkeepNeeded, bytes memory /* performData */) {
-        // Calculate the current day of the week (0 = Sunday, 1 = Monday, ..., 6 = Saturday)
-        uint256 dayOfWeek = (block.timestamp / 86400 + 4) % 7; // Unix time starts on Thursday in 1970
-
-        // Check if it's Sunday
-        bool isSunday = (dayOfWeek == 0);
-
-        // Check if it's close to midnight (00:00), with some buffer (e.g., within 15 minutes after midnight)
-        uint256 secondsSinceMidnight = block.timestamp % 86400;
-        bool isMidnight = (secondsSinceMidnight < 15 * 60);
-
-        // Other conditions
-        uint256 minimumTokenBalance = 1000000 * (10 ** 18);
-        bool hasBalance = balanceOf(s_treasury) >= minimumTokenBalance;
-
-        // Upkeep is needed if it's Sunday at midnight, and other conditions are met
-        upkeepNeeded = (isSunday && isMidnight && hasBalance);
+        bool timePassed = ((block.timestamp - lastUpkeepTimestamp) >
+            i_interval);
+        upkeepNeeded = timePassed && !upkeepLock;
         return (upkeepNeeded, "0x0");
     }
 
-    function performUpkeep(
-        bytes calldata /* performData */
-    ) external onlyOwner returns (uint256 requestId) {
+    function performUpkeep(bytes calldata /* performData */) external {
         (bool upkeepNeeded, ) = checkUpkeep("");
         if (!upkeepNeeded) {
-            revert RL80__UpkeepNotNeeded(balanceOf(s_treasury));
+            revert RL80__UpkeepNotNeeded();
         }
-        requestId = VRF_COORDINATORV2.requestRandomWords(
+
+        upkeepLock = true; // Engage the lock
+
+        uint256 requestId = VRF_COORDINATORV2.requestRandomWords(
             VRF_GAS_LANE,
             VRF_SUBSCRIPTION_ID,
             VRF_REQUEST_CONFIRMATIONS,
@@ -203,8 +213,7 @@ contract RL80 is ERC20, ERC20Burnable, VRFConsumerBaseV2, Ownable {
         });
         s_requestIds.push(requestId);
         s_lastRequestId = requestId;
-        emit RequestSent(requestId, VRF_NUM_WORDS);
-        return requestId;
+        emit RequestSent(requestId);
     }
 
     // VRF
@@ -214,17 +223,14 @@ contract RL80 is ERC20, ERC20Burnable, VRFConsumerBaseV2, Ownable {
         uint256[] memory _randomWords
     ) internal override {
         if (requests[_requestId].exists) {
-            RequestStatus storage request = requests[_requestId];
-            request.fulfilled = true;
-            request.randomWords = _randomWords;
+            RequestStatus storage requestStatus = requests[_requestId];
+            requestStatus.fulfilled = true;
+            requestStatus.randomWords = _randomWords;
 
-            // Store the first random word of this drawing in the sequenceOfWinningNumbers mapping
-            sequenceOfWinningNumbers[s_drawingWeek] = _randomWords[0];
+            lastUpkeepTimestamp = block.timestamp; // Update the timestamp
+            upkeepLock = false; // Disengage the lock
 
-            // Increment the drawing week counter for the next drawing
-            s_drawingWeek++;
-
-            emit RequestFulfilled(_requestId, _randomWords);
+            emit RequestFulfilled(_requestId, _randomWords, block.timestamp);
         }
     }
 
@@ -248,8 +254,12 @@ contract RL80 is ERC20, ERC20Burnable, VRFConsumerBaseV2, Ownable {
 
     function toggleTrading(bool _enable) external onlyOwner {
         s_tradingEnabled = _enable;
-        s_tradingStartTime = _enable ? block.timestamp : 0; // Record the time when trading was enabled, or reset if disabled
+        s_tradingStartTime = _enable ? block.timestamp : 0;
         emit TradingEnabled(_enable);
+    }
+
+    function setInterval(uint256 newInterval) external onlyOwner {
+        i_interval = newInterval;
     }
 
     function setTreasury(address _treasury) external onlyOwner {
@@ -262,21 +272,18 @@ contract RL80 is ERC20, ERC20Burnable, VRFConsumerBaseV2, Ownable {
         return MAX_SUPPLY - totalSupply();
     }
 
-    function getWinningNumberForWeek(
-        uint256 weekIndex
-    ) public view returns (uint256) {
-        require(
-            weekIndex < s_drawingWeek,
-            "Drawing for this week has not occurred yet."
-        );
-        return sequenceOfWinningNumbers[weekIndex];
-    }
-
-    // Public getter function to access request details
     function getRequestDetails(
         uint256 requestId
     ) public view returns (bool, bool, uint256[] memory) {
         RequestStatus storage request = requests[requestId];
         return (request.fulfilled, request.exists, request.randomWords);
+    }
+
+    function getLastTimeStamp() public view returns (uint256) {
+        return s_lastTimeStamp;
+    }
+
+    function getInterval() public view returns (uint256) {
+        return i_interval;
     }
 }

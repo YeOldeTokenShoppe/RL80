@@ -1,6 +1,7 @@
 <!DOCTYPE html>
 <html>
   <head>
+    <link rel="icon" href="favicon.ico">
     <link rel="stylesheet" type="text/css" href="styles.css">
   </head>
 
@@ -30,5 +31,13 @@
 
     <script src="https://cdn.ethers.io/lib/ethers-5.2.umd.min.js"></script>
     <script src="script.js"></script>
+    <script>
+      const socket = io('http://localhost:3000');
+  
+      socket.on('burnEvent', function(data) {
+          console.log('Burn Event:', data);
+          // Update the webpage with the new data
+      });
+  </script>
   </body>
 </html>
